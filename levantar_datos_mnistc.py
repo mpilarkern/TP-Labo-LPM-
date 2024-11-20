@@ -35,7 +35,7 @@ from itertools import combinations
 
 
 #%% Cargar datos
-carpeta = "C:\\Users\\milen\\OneDrive\\Documents\\Trabajos 2024\\Facultad\\Laboratorio de Datos\\tp2\\"
+carpeta = "C:\\Users\\vicky\\OneDrive\\Escritorio\\labo de datos\\tp2\\Archivos TP2-20241112\\"
 # un array para las imágenes, otro para las etiquetas (por qué no lo ponen en el mismo array #$%@*)
 data_imgs = np.load(carpeta + 'mnistc_images.npy')
 data_chrs = np.load(carpeta + 'mnistc_labels.npy')[:,np.newaxis]
@@ -546,6 +546,7 @@ print(f"Prueba: {X_heldout.shape}, {y_heldout.shape}")
 
 # Podemos hacer una funcion chica q prueebe un arbol para una profumndidad o varias pero sin kfold para responder el 2
 
+
 def distintasProfundidades(kf,criterio,profundidades,x_dev,y_dev):
     accuracy = []
     for i,(train_index, test_index) in enumerate(kf.split(x_dev)):
@@ -560,14 +561,16 @@ def distintasProfundidades(kf,criterio,profundidades,x_dev,y_dev):
            accuracy_list.append(acc)
         accuracy.append(accuracy_list)    
     accuracy_np = np.array(accuracy)
+    print(accuracy_np)
     return np.mean(accuracy_np, axis=0)
 
-profundidades = range(1,10)
-nsplits = 5
+profundidades = range(1,11)
+nsplits = 5 #definimos 5 nsplits y variamos los hiperparámetros profundidad y criterio
 kf = KFold(n_splits=nsplits) # graph kfold con accuracy para elegir la mejor k y una vez elegida, los graficos de abajo para hiperparametros
 
 accuracy_entropy = distintasProfundidades(kf,'entropy',profundidades,X_dev,y_dev) # graph puntos acorde a la prof
 accuracy_gini = distintasProfundidades(kf,'gini',profundidades,X_dev,y_dev)
+
 #%%
 plt.figure(figsize=(8, 6))
 plt.scatter(range(1,len(accuracy_entropy)+1), accuracy_entropy, color='blue', label='entropy')
@@ -577,23 +580,46 @@ plt.xlabel('profundidad')
 plt.ylabel('accuracy')
 
 plt.ylim(0.2,1)
-plt.xticks(range(21))
-plt.xlim(0.5,21)
+plt.xticks(range(11))
+plt.xlim(0.5,11)
 plt.title('Accuracy entre diferentes hiperparámetros')
 
 plt.legend()  
 plt.plot()
+
 #%%
+
+def indice(elem, lista):
+    i = 0
+    while lista[i] != elem:
+        i = i+1
+    return i
+        
+max_entropy = max(accuracy_entropy)
+max_profundidad_e = indice(max_entropy,accuracy_entropy) +1
+max_gini = max(accuracy_gini)
+max_profundidad_g = indice(max_gini,accuracy_gini) +1
+
+if max_entropy > max_gini:
+    arbolfinal = ('entropy', max_profundidad_e)
+else:
+    arbolfinal = ('gini', max_profundidad_g) #si son iguales, usamos gini
+
+print(arbolfinal)
+#%%
+
+#segun nuestro analisis, el mejor arbol es aquel con profundidad 9 y criterio de gini
+
 #Creo y entreno el árbol de decisión
-modelo = DecisionTreeClassifier(random_state=42)
+modelo = DecisionTreeClassifier(random_state=42, max_depth=9, criterion="gini")
 modelo.fit(X_dev, y_dev)
 
 # hago predicciones y evaluo el modelo
-y_pred = modelo.predict(X_heldout)
-precision = accuracy_score(y_heldout, y_pred)
+y_pred = modelo.predict(X_heldout) 
+precision = accuracy_score(y_heldout, y_pred) #Esta es la precision del modelo contra el held-out
 print(f"Precisión del modelo: {precision}")
 
-#visualizo la muestra con su predicción
+#visualizo la muestra con su predicción para una imagen cualquiera
 idx = 475  # Índice de una imagen de prueba
 plt.imshow(X_heldout[idx].reshape(ancho, alto), cmap='gray')
 plt.title(f"Etiqueta real: {y_heldout[idx]}, Predicción: {y_pred[idx]}")
@@ -610,160 +636,20 @@ plot_tree(
 plt.title("Árbol de Decisión")
 plt.show()
 #%%
+#Buscamos la funcion de sklearn para crear la matriz de confusion segun nuestro heldout y nuestras predicciones
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-def etiquetas_n(n):
-    res = []
-    for i in range(0, len(data_imgs)):
-        if data_chrs[i] == n:
-            res.append(i)
-    return res
+# Crear matriz de confusión
+matriz_confusion = confusion_matrix(y_heldout, y_pred)
 
-etiquetas_3 = etiquetas_n(3)
+# Mostrar la matriz de confusión
+print("Matriz de Confusión:")
+print(matriz_confusion)
 
-
-#%% Preprocesamiento de datos
-
-from joblib import Parallel, delayed  # Para paralelización
-
-def preprocesar_datos(data_imgs, data_chrs, digitos):
-    """
-    Filtra las imágenes y etiquetas, aplana las imágenes y las normaliza.
-    """
-    # Eliminar dimensiones adicionales
-    data_imgs = data_imgs.squeeze()
-    data_chrs = data_chrs.squeeze()
-
-    # Filtrar los dígitos deseados
-    filtro = np.isin(data_chrs, digitos)
-    data_imgs_filtradas = data_imgs[filtro]
-    data_chrs_filtradas = data_chrs[filtro]
-
-    # Aplanar imágenes y normalizarlas
-    num_muestras, ancho, alto = data_imgs_filtradas.shape
-    X = data_imgs_filtradas.reshape(num_muestras, ancho * alto) / 255.0
-    y = data_chrs_filtradas
-
-    return X, y
-
-#%% Validación cruzada paralelizada
-def evaluar_profundidad(pmax, criterio, x_train, y_train, x_test, y_test):
-    """
-    Evalúa un árbol de decisión para una profundidad específica.
-    """
-    arbol = DecisionTreeClassifier(max_depth=pmax, criterion=criterio)
-    arbol.fit(x_train, y_train)
-    pred = arbol.predict(x_test)
-    return metrics.accuracy_score(y_test, pred)
-
-def distintasProfundidades(kf, criterio, profundidades, X_dev, y_dev):
-    """
-    Realiza validación cruzada para diferentes profundidades y calcula el accuracy promedio.
-    """
-    accuracy = []
-
-    # Precomputar divisiones de KFold
-    folds = [(train_idx, test_idx) for train_idx, test_idx in kf.split(X_dev)]
-    
-    # Iterar sobre profundidades
-    for pmax in profundidades:
-        fold_accuracies = Parallel(n_jobs=-1)(  # Paralelizar el cálculo
-            delayed(evaluar_profundidad)(
-                pmax, criterio, 
-                X_dev[train_idx], y_dev[train_idx], 
-                X_dev[test_idx], y_dev[test_idx]
-            )
-            for train_idx, test_idx in folds
-        )
-        accuracy.append(np.mean(fold_accuracies))
-    return accuracy
-
-#%% Main
-# Parámetros iniciales
-digitos = [3, 4, 6, 7, 9]
-profundidades = range(1, 21)
-nsplits = 5
-
-# Preprocesar datos
-X, y = preprocesar_datos(data_imgs, data_chrs, digitos)
-
-# Dividir datos en entrenamiento y prueba
-X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, y, test_size=0.6, random_state=42)
-
-# Inicializar KFold
-kf = KFold(n_splits=nsplits)
-
-# Calcular accuracy para ambos criterios
-accuracy_entropy = distintasProfundidades(kf, 'entropy', profundidades, X_dev, y_dev)
-accuracy_gini = distintasProfundidades(kf, 'gini', profundidades, X_dev, y_dev)
-
-#%% Visualización
-plt.figure(figsize=(8, 6))
-plt.scatter(profundidades, accuracy_entropy, color='blue', label='entropy')
-plt.scatter(profundidades, accuracy_gini, color='red', label='gini')
-plt.xlabel('Profundidad')
-plt.ylabel('Accuracy')
-plt.ylim(0.2, 1)
-plt.xticks(range(1, 21))
-plt.title('Accuracy entre diferentes hiperparámetros')
-plt.legend()
+# Visualizar la matriz de confusión con etiquetas
+disp = ConfusionMatrixDisplay(confusion_matrix=matriz_confusion, display_labels=modelo.classes_)
+disp.plot(cmap='viridis', xticks_rotation='vertical')  # Cambiar color y rotación de etiquetas si es necesario
+plt.xlabel("Predicción (Modelo)", fontsize=12)
+plt.ylabel("Etiqueta Real (Verdadero)", fontsize=12)
+plt.title("Matriz de Confusión", fontsize=14)
 plt.show()
-
-
-#%%
-'''
-#Los árboles de decisión requieren un array 2D en el que cada fila sea una muestra (imagen) y cada columna sea una característica (píxeles aplanados o valores derivados).
-
-
-
-#Elimino las dimensiones adicionales
-data_imgs = data_imgs.squeeze()
-data_chrs = data_chrs.squeeze()
-
-
-#Me quedo con los dígitos que nos corresponden
-digitos = [3, 4, 6, 7, 9]
-
-filtro = np.isin(data_chrs, digitos) #filtro las etiquetas correspondientes a los digitos que quiero
-
-data_imgs_filtradas = data_imgs[filtro]
-data_chrs_filtradas = data_chrs[filtro]
-
-#Aplano las imagenes
-num_muestras, ancho, alto = data_imgs_filtradas.shape  # Obtener dimensiones
-X = data_imgs_filtradas.reshape(num_muestras, ancho * alto) # (10000, 28*28) -> (10000, 784)
-
-#Normalizo las imágenes
-X = X / 255.0  # Escalar los valores de los píxeles entre 0 y 1
-
-#Uso las etiquetas como Y
-y = data_chrs_filtradas
-
-#Divido en datos de entrenamiento y prueba
-X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, y, test_size=0.6, random_state=42)
-
-print(f"Entrenamiento: {X_dev.shape}, {y_dev.shape}")
-print(f"Prueba: {X_heldout.shape}, {y_heldout.shape}")
-
-def distintasProfundidades(kf,criterio,profundidades,x_dev,y_dev):
-    accuracy = []
-    for i,(train_index, test_index) in enumerate(kf.split(x_dev)):
-        kf_X_train, kf_X_test = x_dev[train_index], x_dev[test_index]
-        kf_y_train, kf_y_test = y_dev[train_index], y_dev[test_index]  
-        accuracy_list = []
-        for pmax in profundidades:    
-           arbol = tree.DecisionTreeClassifier(max_depth = pmax, criterion= criterio)
-           arbol.fit(kf_X_train, kf_y_train)  
-           pred = arbol.predict(kf_X_test)    
-           acc = metrics.accuracy_score(kf_y_test, pred)
-           accuracy_list.append(acc)
-        accuracy.append(accuracy_list)    
-    accuracy_np = np.array(accuracy)
-    return np.mean(accuracy_np, axis=0)
-
-profundidades = range(1,21)
-nsplits = 5
-kf = KFold(n_splits=nsplits)
-
-accuracy_entropy = distintasProfundidades(kf,'entropy',profundidades,X_dev,y_dev)
-accuracy_gini = distintasProfundidades(kf,'gini',profundidades,X_dev,y_dev)
-'''
