@@ -430,7 +430,6 @@ plt.show()
 #¿Son todas las imágenes de una misma clase muy similares entre sí?
 
 # Elegimos el dígito 3 para responder esta pregunta.
-'''
 def primeras_n_matrices(matrices, n):
     res = []
     for i in range(0,n):
@@ -445,7 +444,50 @@ matriz_pixeles_iguales_3 = matriz_pixeles_iguales(recorte_3)
 plt.figure(figsize=(8, 6))
 sns.heatmap(matriz_pixeles_iguales_3, annot=False, cmap='viridis')  
 plt.title("matrices 3")
-plt.show()'''
+plt.show()
+
+#%% 
+# Desviación Estandard:
+# Para tener una métrica que compare todas las imágenes de la clase en el dataset decidimos clacular la matriz de desviación estandar (cuanto se diferencia cada pixel de su media de clase para cada imagen de la clase)
+# Como ya tenemos una funcion que calcula la matriz de la diferencia entr dos matrices (con la diferencia como el valor absoluto de su resta), en vez de hacer exactamente la desviacion estandard de cada pixel,
+# hicimos la matriz_diferencia_de_pixeles de cada imagen con la media y luego sumamos y dividimos las matrices por el total de imagenes
+# Nos da una métrica muy similar a la desviación estandard
+
+def matriz_desviacion_de_la_media(matriz_promedio, matrices):
+    matriz_suma = np.zeros((28, 28))
+    for matriz in matrices:
+        matriz_suma = matriz_suma + matriz_diferencia_de_pixeles(matriz_promedio, matriz)
+    return matriz_suma/(len(matrices))
+
+desviacion_de_la_media_3 = matriz_desviacion_de_la_media(promedio_3, matrices_3)
+
+lista_listas_matrices = [matrices_0, matrices_1, matrices_2, matrices_3, matrices_4, matrices_5, matrices_6, matrices_7, matrices_8, matrices_9]
+
+def desviaciones_medias_por_clase(promedios, listas_matrices):
+    resultado = []
+    for i in range (0,10):
+        desv_med = np.mean(matriz_desviacion_de_la_media(promedios[i], listas_matrices[i]))
+        resultado.append(desv_med)
+    return resultado
+        
+valores = desviaciones_medias_por_clase(lista_matrices, lista_listas_matrices)
+
+# Crear un rango de índices de 0 a 9
+indices = range(len(valores))  
+
+# Crear el gráfico de barras
+plt.bar(indices, valores)
+
+plt.xticks(indices)
+
+# Etiquetas y título
+plt.xlabel('Clase')
+plt.ylabel('Desviación promedio')
+plt.title('Desviación promedio de cada clase')
+
+plt.show()
+        
+
 #%%
 #Los árboles de decisión requieren un array 2D en el que cada fila sea una muestra (imagen) y cada columna sea una característica (píxeles aplanados o valores derivados).
 
