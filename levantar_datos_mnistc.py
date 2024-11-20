@@ -20,13 +20,22 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from matplotlib.colors import BoundaryNorm
+from sklearn.model_selection import train_test_split, KFold
+from sklearn import tree
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from matplotlib.colors import ListedColormap
 import math
+from matplotlib.colors import BoundaryNorm
+from sklearn import metrics
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.tree import plot_tree
+from itertools import combinations
+
 
 
 #%% Cargar datos
-carpeta = "C:\\Users\\milen\\OneDrive\\Documents\\Trabajos 2024\\Facultad\\Laboratorio de Datos\\tp2\\"
+carpeta = "C:\\Users\\pilik\\OneDrive\\Escritorio\\Info académica Pili\\LCD - Pili\\2024\\2° cuatri\\laboratorio de datos\\TP Labo 2\\"
 # un array para las imágenes, otro para las etiquetas (por qué no lo ponen en el mismo array #$%@*)
 data_imgs = np.load(carpeta + 'mnistc_images.npy')
 data_chrs = np.load(carpeta + 'mnistc_labels.npy')[:,np.newaxis]
@@ -43,7 +52,7 @@ print(data_chrs.shape)
 #%% Grafico imagen
 
 # Elijo la imagen correspondiente a la letra que quiero graficar
-n_digit = 5
+n_digit = 780
 image_array = data_imgs[n_digit,:,:,0]
 image_label = data_chrs[n_digit]
 
@@ -53,7 +62,7 @@ plt.figure(figsize=(10,8))
 plt.imshow(image_array, cmap='gray')
 plt.title('caracter: ' + str(image_label))
 plt.axis('off')  
-#plt.show()
+plt.show()
 
 #%%
 
@@ -105,6 +114,56 @@ promedio_8 = matriz_de_promedios(matrices_8)
 matrices_9 = obtener_matrices_etiquetadas_n(9)
 promedio_9 = matriz_de_promedios(matrices_9)
 
+#hacemos el heatmap de la matriz promedio de cada dígito
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_0, annot=False, cmap='viridis')  
+plt.title("Matriz promedio del dígito 0")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_1, annot=False, cmap='viridis')
+plt.title("Matriz promedio del dígito 1")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_2, annot=False, cmap='viridis')  
+plt.title("Matriz promedio del dígito 2")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_3, annot=False, cmap='viridis')  
+plt.title("Matriz promedio del dígito 3")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_4, annot=False, cmap='viridis')  
+plt.title("Matriz promedio del dígito 4")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_5, annot=False, cmap='viridis') 
+plt.title("Matriz promedio del dígito 5")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_6, annot=False, cmap='viridis')  
+plt.title("Matriz promedio del dígito 6")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_7, annot=False, cmap='viridis') 
+plt.title("Matriz promedio del dígito 7")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_8, annot=False, cmap='viridis')  
+plt.title("Matriz promedio del dígito 8")
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(promedio_9, annot=False, cmap='viridis')  
+plt.title("Matriz promedio del dígito 9")
+plt.show()
 #%%
 
 # Vemos qué atributos son iguales en más imagenes
@@ -339,10 +398,306 @@ sns.heatmap(matriz_prom_dif, annot=True, fmt='0.1f', cmap=cmap, norm=norm, cbar=
 plt.title("Promedio de diferenciabilidad de imagenes")
 plt.show()
 
+def suma_fila(fila, matriz):
+    res = 0
+    for i in range(0,10):
+        res = res + matriz[fila][i]
+    return res
+
+suma_0 = suma_fila(0,matriz_prom_dif)
+suma_1 = suma_fila(1,matriz_prom_dif)
+suma_2 = suma_fila(2,matriz_prom_dif)
+suma_3 = suma_fila(3,matriz_prom_dif)
+suma_4 = suma_fila(4,matriz_prom_dif)
+suma_5 = suma_fila(5,matriz_prom_dif)
+suma_6 = suma_fila(6,matriz_prom_dif)
+suma_7 = suma_fila(7,matriz_prom_dif)
+suma_8 = suma_fila(8,matriz_prom_dif)
+suma_9 = suma_fila(9,matriz_prom_dif)
+
+columnas = list(range(10))
+valores = [suma_0, suma_1, suma_2, suma_3, suma_4, suma_5, suma_6, suma_7, suma_8, suma_9]
+
+plt.bar(columnas, valores)
+
+plt.xlabel('Dígitos')
+plt.ylabel('Suma promedio diferenciabilidades')
+plt.title('Comparación diferenciabilidades')
+plt.xticks(columnas)
+
+plt.show() 
 #%% 
 #¿Son todas las imágenes de una misma clase muy similares entre sí?
 
 # Elegimos el dígito 3 para responder esta pregunta.
+'''
+def primeras_n_matrices(matrices, n):
+    res = []
+    for i in range(0,n):
+        res.append(matrices[i])
+    return res
 
+#tomamos las primeras 100 imagenes de la clase del 3 como muestra representativa
+recorte_3 = primeras_n_matrices(matrices_3,100)
 #Primero tomamos todas las imágenes del 3 y creamos la matriz de pixeles iguales de esta clase:
-matriz_pixeles_iguales_3 = matriz_pixeles_iguales(matrices_3) #no anda
+matriz_pixeles_iguales_3 = matriz_pixeles_iguales(recorte_3)
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(matriz_pixeles_iguales_3, annot=False, cmap='viridis')  
+plt.title("matrices 3")
+plt.show()'''
+#%%
+#Los árboles de decisión requieren un array 2D en el que cada fila sea una muestra (imagen) y cada columna sea una característica (píxeles aplanados o valores derivados).
+
+
+
+#Elimino las dimensiones adicionales
+data_imgs = data_imgs.squeeze()
+data_chrs = data_chrs.squeeze()
+
+
+#Me quedo con los dígitos que nos corresponden
+digitos = [3, 4, 6, 7, 9]
+
+filtro = np.isin(data_chrs, digitos) #filtro las etiquetas correspondientes a los digitos que quiero
+
+data_imgs_filtradas = data_imgs[filtro]
+data_chrs_filtradas = data_chrs[filtro]
+
+#Aplano las imagenes
+num_muestras, ancho, alto = data_imgs_filtradas.shape  # Obtener dimensiones
+X = data_imgs_filtradas.reshape(num_muestras, ancho * alto) # (10000, 28*28) -> (10000, 784)
+
+#Normalizo las imágenes
+X = X / 255.0  # Escalar los valores de los píxeles entre 0 y 1
+
+#Uso las etiquetas como Y
+y = data_chrs_filtradas
+
+#Divido en datos de entrenamiento y prueba
+X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, y, test_size=0.6, random_state=42)
+
+print(f"Entrenamiento: {X_dev.shape}, {y_dev.shape}")
+print(f"Prueba: {X_heldout.shape}, {y_heldout.shape}")
+
+def distintasProfundidades(kf,criterio,profundidades,x_dev,y_dev):
+    accuracy = []
+    for i,(train_index, test_index) in enumerate(kf.split(x_dev)):
+        kf_X_train, kf_X_test = x_dev[train_index], x_dev[test_index]
+        kf_y_train, kf_y_test = y_dev[train_index], y_dev[test_index]  
+        accuracy_list = []
+        for pmax in profundidades:    
+           arbol = tree.DecisionTreeClassifier(max_depth = pmax, criterion= criterio)
+           arbol.fit(kf_X_train, kf_y_train)  
+           pred = arbol.predict(kf_X_test)    
+           acc = metrics.accuracy_score(kf_y_test, pred)
+           accuracy_list.append(acc)
+        accuracy.append(accuracy_list)    
+    accuracy_np = np.array(accuracy)
+    return np.mean(accuracy_np, axis=0)
+
+profundidades = range(1,21)
+nsplits = 5
+kf = KFold(n_splits=nsplits)
+
+accuracy_entropy = distintasProfundidades(kf,'entropy',profundidades,X_dev,y_dev)
+accuracy_gini = distintasProfundidades(kf,'gini',profundidades,X_dev,y_dev)
+#%%
+plt.figure(figsize=(8, 6))
+plt.scatter(range(1,len(accuracy_entropy)+1), accuracy_entropy, color='blue', label='entropy')
+plt.scatter(range(1,len(accuracy_gini)+1), accuracy_gini, color='red', label='gini')
+
+plt.xlabel('profundidad')
+plt.ylabel('accuracy')
+
+plt.ylim(0.2,1)
+plt.xticks(range(21))
+plt.xlim(0.5,21)
+plt.title('Accuracy entre diferentes hiperparámetros')
+
+plt.legend()  
+plt.plot()
+#%%
+#Creo y entreno el árbol de decisión
+modelo = DecisionTreeClassifier(random_state=42)
+modelo.fit(X_dev, y_dev)
+
+# hago predicciones y evaluo el modelo
+y_pred = modelo.predict(X_heldout)
+precision = accuracy_score(y_heldout, y_pred)
+print(f"Precisión del modelo: {precision}")
+
+#visualizo la muestra con su predicción
+idx = 475  # Índice de una imagen de prueba
+plt.imshow(X_heldout[idx].reshape(ancho, alto), cmap='gray')
+plt.title(f"Etiqueta real: {y_heldout[idx]}, Predicción: {y_pred[idx]}")
+plt.show()
+
+plt.figure(figsize=(20, 10))  # Ajustar tamaño de la figura
+plot_tree(
+    modelo,
+    feature_names=[f"Pixel {i}" for i in range(X.shape[1])],  # Opcional: nombres de características
+    class_names=[str(c) for c in modelo.classes_],  # Etiquetas de las clases
+    filled=True,  # Colorear nodos según pureza
+    rounded=True  # Bordes redondeados
+)
+plt.title("Árbol de Decisión")
+plt.show()
+#%%
+
+def etiquetas_n(n):
+    res = []
+    for i in range(0, len(data_imgs)):
+        if data_chrs[i] == n:
+            res.append(i)
+    return res
+
+etiquetas_3 = etiquetas_n(3)
+
+
+#%% Preprocesamiento de datos
+
+from joblib import Parallel, delayed  # Para paralelización
+
+def preprocesar_datos(data_imgs, data_chrs, digitos):
+    """
+    Filtra las imágenes y etiquetas, aplana las imágenes y las normaliza.
+    """
+    # Eliminar dimensiones adicionales
+    data_imgs = data_imgs.squeeze()
+    data_chrs = data_chrs.squeeze()
+
+    # Filtrar los dígitos deseados
+    filtro = np.isin(data_chrs, digitos)
+    data_imgs_filtradas = data_imgs[filtro]
+    data_chrs_filtradas = data_chrs[filtro]
+
+    # Aplanar imágenes y normalizarlas
+    num_muestras, ancho, alto = data_imgs_filtradas.shape
+    X = data_imgs_filtradas.reshape(num_muestras, ancho * alto) / 255.0
+    y = data_chrs_filtradas
+
+    return X, y
+
+#%% Validación cruzada paralelizada
+def evaluar_profundidad(pmax, criterio, x_train, y_train, x_test, y_test):
+    """
+    Evalúa un árbol de decisión para una profundidad específica.
+    """
+    arbol = DecisionTreeClassifier(max_depth=pmax, criterion=criterio)
+    arbol.fit(x_train, y_train)
+    pred = arbol.predict(x_test)
+    return metrics.accuracy_score(y_test, pred)
+
+def distintasProfundidades(kf, criterio, profundidades, X_dev, y_dev):
+    """
+    Realiza validación cruzada para diferentes profundidades y calcula el accuracy promedio.
+    """
+    accuracy = []
+
+    # Precomputar divisiones de KFold
+    folds = [(train_idx, test_idx) for train_idx, test_idx in kf.split(X_dev)]
+    
+    # Iterar sobre profundidades
+    for pmax in profundidades:
+        fold_accuracies = Parallel(n_jobs=-1)(  # Paralelizar el cálculo
+            delayed(evaluar_profundidad)(
+                pmax, criterio, 
+                X_dev[train_idx], y_dev[train_idx], 
+                X_dev[test_idx], y_dev[test_idx]
+            )
+            for train_idx, test_idx in folds
+        )
+        accuracy.append(np.mean(fold_accuracies))
+    return accuracy
+
+#%% Main
+# Parámetros iniciales
+digitos = [3, 4, 6, 7, 9]
+profundidades = range(1, 21)
+nsplits = 5
+
+# Preprocesar datos
+X, y = preprocesar_datos(data_imgs, data_chrs, digitos)
+
+# Dividir datos en entrenamiento y prueba
+X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, y, test_size=0.6, random_state=42)
+
+# Inicializar KFold
+kf = KFold(n_splits=nsplits)
+
+# Calcular accuracy para ambos criterios
+accuracy_entropy = distintasProfundidades(kf, 'entropy', profundidades, X_dev, y_dev)
+accuracy_gini = distintasProfundidades(kf, 'gini', profundidades, X_dev, y_dev)
+
+#%% Visualización
+plt.figure(figsize=(8, 6))
+plt.scatter(profundidades, accuracy_entropy, color='blue', label='entropy')
+plt.scatter(profundidades, accuracy_gini, color='red', label='gini')
+plt.xlabel('Profundidad')
+plt.ylabel('Accuracy')
+plt.ylim(0.2, 1)
+plt.xticks(range(1, 21))
+plt.title('Accuracy entre diferentes hiperparámetros')
+plt.legend()
+plt.show()
+
+
+#%%
+'''
+#Los árboles de decisión requieren un array 2D en el que cada fila sea una muestra (imagen) y cada columna sea una característica (píxeles aplanados o valores derivados).
+
+
+
+#Elimino las dimensiones adicionales
+data_imgs = data_imgs.squeeze()
+data_chrs = data_chrs.squeeze()
+
+
+#Me quedo con los dígitos que nos corresponden
+digitos = [3, 4, 6, 7, 9]
+
+filtro = np.isin(data_chrs, digitos) #filtro las etiquetas correspondientes a los digitos que quiero
+
+data_imgs_filtradas = data_imgs[filtro]
+data_chrs_filtradas = data_chrs[filtro]
+
+#Aplano las imagenes
+num_muestras, ancho, alto = data_imgs_filtradas.shape  # Obtener dimensiones
+X = data_imgs_filtradas.reshape(num_muestras, ancho * alto) # (10000, 28*28) -> (10000, 784)
+
+#Normalizo las imágenes
+X = X / 255.0  # Escalar los valores de los píxeles entre 0 y 1
+
+#Uso las etiquetas como Y
+y = data_chrs_filtradas
+
+#Divido en datos de entrenamiento y prueba
+X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, y, test_size=0.6, random_state=42)
+
+print(f"Entrenamiento: {X_dev.shape}, {y_dev.shape}")
+print(f"Prueba: {X_heldout.shape}, {y_heldout.shape}")
+
+def distintasProfundidades(kf,criterio,profundidades,x_dev,y_dev):
+    accuracy = []
+    for i,(train_index, test_index) in enumerate(kf.split(x_dev)):
+        kf_X_train, kf_X_test = x_dev[train_index], x_dev[test_index]
+        kf_y_train, kf_y_test = y_dev[train_index], y_dev[test_index]  
+        accuracy_list = []
+        for pmax in profundidades:    
+           arbol = tree.DecisionTreeClassifier(max_depth = pmax, criterion= criterio)
+           arbol.fit(kf_X_train, kf_y_train)  
+           pred = arbol.predict(kf_X_test)    
+           acc = metrics.accuracy_score(kf_y_test, pred)
+           accuracy_list.append(acc)
+        accuracy.append(accuracy_list)    
+    accuracy_np = np.array(accuracy)
+    return np.mean(accuracy_np, axis=0)
+
+profundidades = range(1,21)
+nsplits = 5
+kf = KFold(n_splits=nsplits)
+
+accuracy_entropy = distintasProfundidades(kf,'entropy',profundidades,X_dev,y_dev)
+accuracy_gini = distintasProfundidades(kf,'gini',profundidades,X_dev,y_dev)
+'''
