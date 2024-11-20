@@ -35,7 +35,7 @@ from itertools import combinations
 
 
 #%% Cargar datos
-carpeta = "C:\\Users\\pilik\\OneDrive\\Escritorio\\Info académica Pili\\LCD - Pili\\2024\\2° cuatri\\laboratorio de datos\\TP Labo 2\\"
+carpeta = "C:\\Users\\milen\\OneDrive\\Documents\\Trabajos 2024\\Facultad\\Laboratorio de Datos\\tp2\\"
 # un array para las imágenes, otro para las etiquetas (por qué no lo ponen en el mismo array #$%@*)
 data_imgs = np.load(carpeta + 'mnistc_images.npy')
 data_chrs = np.load(carpeta + 'mnistc_labels.npy')[:,np.newaxis]
@@ -170,6 +170,7 @@ plt.show()
 
 umbral = 5
 
+# Devuelve una matriz donde cada celda contiene la cantidad de matrices de la lista que tenían el "mismo" valor en ese pixel
 def matriz_pixeles_iguales(matrices):
     matriz_resultado = np.zeros((28, 28))
     for matriz1 in matrices:
@@ -319,7 +320,17 @@ plt.show()
 # Por ejemplo, el 0 y el 1 coinciden solo en el 70% de sus pixeles por lo que son relativamente faciles de diferenciar
 # El 5 y el 6 coinciden en el 72% de sus pixeles por lo que es un poco más dificil diferenciarlos
 
+limites = [68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 100]  # Último rango 79 y 100 tienen mismo color
+colores = ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6',
+           '#2171b5', '#08519c', '#08306b', '#08306b', '#08306b', '#08306b']  # Escala azul
+#%%
+sns.heatmap(matriz_comparacion_0_1, annot=False, cmap='viridis')  
+plt.title("Matriz de comparaciòn del 0 y el 1")
+plt.show()
 
+sns.heatmap(matriz_comparacion_1_7, annot=False, cmap='viridis')  
+plt.title("Matriz de comparaciòn del 1 y el 7")
+plt.show()
 #%%
 # Además del porcentaje de coincidencia, es importante notar que para una comparación en particular hay pixeles específicos que diferencian un dígito de otro
 
@@ -447,22 +458,32 @@ plt.title("matrices 3")
 plt.show()
 
 #%% 
-# Desviación Estandard:
-# Para tener una métrica que compare todas las imágenes de la clase en el dataset decidimos clacular la matriz de desviación estandar (cuanto se diferencia cada pixel de su media de clase para cada imagen de la clase)
-# Como ya tenemos una funcion que calcula la matriz de la diferencia entr dos matrices (con la diferencia como el valor absoluto de su resta), en vez de hacer exactamente la desviacion estandard de cada pixel,
+# Desviación Absoluta Media:
+# Para tener una métrica que compare todas las imágenes de la clase en el dataset decidimos clacular la matriz de desviación absoluta media (cuanto se diferencia cada pixel de su media de clase para cada imagen de la clase)
+# Como ya tenemos una funcion que calcula la matriz de la diferencia entr dos matrices (con la diferencia como el valor absoluto de su resta)
 # hicimos la matriz_diferencia_de_pixeles de cada imagen con la media y luego sumamos y dividimos las matrices por el total de imagenes
 # Nos da una métrica muy similar a la desviación estandard
 
+
+#devuelve una matriz en la que cada celda contiene la desviación de ese pixel respecto del pixel de la matriz promedio
 def matriz_desviacion_de_la_media(matriz_promedio, matrices):
     matriz_suma = np.zeros((28, 28))
     for matriz in matrices:
         matriz_suma = matriz_suma + matriz_diferencia_de_pixeles(matriz_promedio, matriz)
     return matriz_suma/(len(matrices))
 
+#%%
 desviacion_de_la_media_3 = matriz_desviacion_de_la_media(promedio_3, matrices_3)
 
+sns.heatmap(desviacion_de_la_media_3, annot=False, cmap='viridis')  
+plt.title("Matriz de desviación absoluta media del 3")
+plt.show()
+
+#%%
 lista_listas_matrices = [matrices_0, matrices_1, matrices_2, matrices_3, matrices_4, matrices_5, matrices_6, matrices_7, matrices_8, matrices_9]
 
+
+# Calcula la desviación media de cada clase haciendo el promedio de su matriz de desviación de la media
 def desviaciones_medias_por_clase(promedios, listas_matrices):
     resultado = []
     for i in range (0,10):
@@ -482,11 +503,12 @@ plt.xticks(indices)
 
 # Etiquetas y título
 plt.xlabel('Clase')
-plt.ylabel('Desviación promedio')
-plt.title('Desviación promedio de cada clase')
+plt.ylabel('Desviación absoluta promedio')
+plt.title('Desviación absoluta de la media promedio de cada clase')
 
 plt.show()
-        
+
+
 
 #%%
 #Los árboles de decisión requieren un array 2D en el que cada fila sea una muestra (imagen) y cada columna sea una característica (píxeles aplanados o valores derivados).
@@ -522,6 +544,8 @@ X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, y, test_size=0.6, rando
 print(f"Entrenamiento: {X_dev.shape}, {y_dev.shape}")
 print(f"Prueba: {X_heldout.shape}, {y_heldout.shape}")
 
+# Podemos hacer una funcion chica q prueebe un arbol para una profumndidad o varias pero sin kfold para responder el 2
+
 def distintasProfundidades(kf,criterio,profundidades,x_dev,y_dev):
     accuracy = []
     for i,(train_index, test_index) in enumerate(kf.split(x_dev)):
@@ -538,11 +562,11 @@ def distintasProfundidades(kf,criterio,profundidades,x_dev,y_dev):
     accuracy_np = np.array(accuracy)
     return np.mean(accuracy_np, axis=0)
 
-profundidades = range(1,21)
+profundidades = range(1,10)
 nsplits = 5
-kf = KFold(n_splits=nsplits)
+kf = KFold(n_splits=nsplits) # graph kfold con accuracy para elegir la mejor k y una vez elegida, los graficos de abajo para hiperparametros
 
-accuracy_entropy = distintasProfundidades(kf,'entropy',profundidades,X_dev,y_dev)
+accuracy_entropy = distintasProfundidades(kf,'entropy',profundidades,X_dev,y_dev) # graph puntos acorde a la prof
 accuracy_gini = distintasProfundidades(kf,'gini',profundidades,X_dev,y_dev)
 #%%
 plt.figure(figsize=(8, 6))
